@@ -1,0 +1,63 @@
+# Debug one audio station against a local Broadcast Hub.
+# The hub Compose project must already be up (service name: web, network
+# mediateca_broadcast_default):
+#
+#   cd ../mediateca-broadcast && docker compose up
+#
+# Issue a token once in the hub (this replaces any previous token for that station):
+#
+#   docker compose exec web bin/rails runner 'puts Station.find(STATION_ID).assign_agent_token!'
+#
+# Then, in this repository:
+#
+#   cp .env.example .env    # AGENT_TOKEN and SCREEN_ID
+#   docker compose up --build
+#   docker compose logs -f station
+#
+# The station joins the Hub Compose network and calls web by its IP.
+# Development rejects Host: web. Leave HUB_BASE_URL unset.
+# mpv is installed in this image and plays the cached playlist on the host
+# sound card (/dev/snd) and the host Pulse socket.
+
+name: mediateca_audio_station
+
+services:
+  station:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AGENT_TOKEN: ${AGENT_TOKEN:-}
+      SCREEN_ID: ${SCREEN_ID:-}
+      HUB_BASE_URL: ${HUB_BASE_URL:-}
+      POLL_INTERVAL: ${POLL_INTERVAL:-15s}
+      LATE_THRESHOLD: ${LATE_THRESHOLD:-2s}
+      DATA_DIR: /var/lib/mediateca-audio-station
+      MPV_PATH: ${MPV_PATH:-mpv}
+      AUDIO_DEVICE: ${AUDIO_DEVICE:-}
+      PULSE_SERVER: ${PULSE_SERVER:-unix:/run/host-pulse/native}
+      PULSE_SOCKET: /run/host-pulse/native
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - station-data:/var/lib/mediateca-audio-station
+      - ${XDG_RUNTIME_DIR:-/run/user/1000}/pulse:/run/host-pulse:ro
+      - ${HOME}/.config/pulse/cookie:/root/.config/pulse/cookie:ro
+      # Full config instead of the variables above. Mode must be 0600.
+      # - ./config.yaml:/etc/mediateca-audio-station/config.yaml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - hub
+    restart: unless-stopped
+
+networks:
+  hub:
+    name: mediateca_broadcast_default
+    external: true
+
+volumes:
+  station-data:

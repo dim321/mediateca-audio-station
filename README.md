@@ -72,6 +72,32 @@ journalctl -u mediateca-audio-station -f
 
 Токен и заголовок `Authorization` в журнал не пишутся.
 
+## Docker
+
+Development Compose подключает контейнер станции к сети Hub `mediateca_broadcast_default`. Плейлист играет `mpv` из этого образа: звук идёт на `/dev/snd` хоста и в его Pulse-сокет.
+
+Сначала поднимите Hub:
+
+```bash
+cd ../mediateca-broadcast && docker compose up
+```
+
+Токен выдаётся один раз и заменяет предыдущий токен этой станции:
+
+```bash
+docker compose exec web bin/rails runner 'puts Station.find(STATION_ID).assign_agent_token!'
+```
+
+В этом репозитории:
+
+```bash
+cp .env.example .env    # AGENT_TOKEN и SCREEN_ID
+docker compose up --build
+docker compose logs -f station
+```
+
+`HUB_BASE_URL` оставьте пустым. Точка входа берёт IP сервиса `web` на сети Hub: development отклоняет заголовок `Host: web`.
+
 ## Проверка
 
 Тесты не требуют установленного `mpv`:
