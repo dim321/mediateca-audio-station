@@ -82,7 +82,7 @@ func Load(path string) (File, error) {
 }
 
 func (f File) validate() error {
-	if f.HubBaseURL == "" || !(strings.HasPrefix(f.HubBaseURL, "http://") || strings.HasPrefix(f.HubBaseURL, "https://")) {
+	if f.HubBaseURL == "" || (!strings.HasPrefix(f.HubBaseURL, "http://") && !strings.HasPrefix(f.HubBaseURL, "https://")) {
 		return fmt.Errorf("hub_base_url is invalid")
 	}
 	rest := strings.TrimPrefix(strings.TrimPrefix(f.HubBaseURL, "https://"), "http://")
